@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traductor de Voz</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
+        h1 { color: #ff4b4b; }
+        textarea { width: 80%; height: 100px; margin: 10px; font-size: 18px; }
+        button { font-size: 18px; padding: 10px 20px; margin: 10px; cursor: pointer; }
+        .start { background-color: #4CAF50; color: white; }
+        .stop { background-color: #ff4b4b; color: white; }
+        .status { font-size: 20px; font-weight: bold; margin-top: 10px; }
+        .active { color: green; }
+        .inactive { color: red; }
+    </style>
+    <script>
+        async function actualizarTexto() {
+            const response = await fetch('/estado');
+            const data = await response.json();
+            document.getElementById("texto_espanol").value = data.texto_espanol;
+            document.getElementById("texto_chino").value = data.texto_chino;
+            actualizarEstado(data.escuchando);
+        }
+
+        async function iniciarEscucha() {
+            await fetch('/iniciar', { method: 'POST' });
+            actualizarEstado(true);
+        }
+
+        async function detenerEscucha() {
+            await fetch('/detener', { method: 'POST' });
+            actualizarEstado(false);
+        }
+
+        function actualizarEstado(escuchando) {
+            const statusElement = document.getElementById("estado_escucha");
+            if (escuchando) {
+                statusElement.textContent = "🔊 Escuchando...";
+                statusElement.className = "status active";
+            } else {
+                statusElement.textContent = "⏹️ Escucha detenida";
+                statusElement.className = "status inactive";
+            }
+        }
+
+        setInterval(actualizarTexto, 3000);
+    </script>
+</head>
+<body>
+    <h1>🎙 Traductor de Español a Chino</h1>
+    
+    <button class="start" onclick="iniciarEscucha()">▶️ Iniciar Escucha</button>
+    <button class="stop" onclick="detenerEscucha()">⏹️ Detener Escucha</button>
+
+    <p id="estado_escucha" class="status inactive">⏹️ Escucha detenida</p>
+
+    <h2>Texto en Español</h2>
+    <textarea id="texto_espanol" readonly></textarea>
+
+    <h2>Traducción en Chino</h2>
+    <textarea id="texto_chino" readonly></textarea>
+</body>
+</html>
