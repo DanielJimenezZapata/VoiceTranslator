@@ -1,4 +1,0 @@
-Flask
-speechrecognition
-deep-translator
-pyaudio
