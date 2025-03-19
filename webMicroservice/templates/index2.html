@@ -37,15 +37,19 @@
         }
 
         async function iniciarVoz() {
-            const response = await fetch('/hablar', { method: 'POST' });
-            const data = await response.json();
-            if (data.url) {
-                let audio = document.getElementById("audioPlayer");
-                audio.src = data.url;  
-                audio.style.display = "block";  
-                audio.play();
-            } else {
-                alert("Error: " + data.error);
+            try {
+                const response = await fetch('/hablar', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.texto_chino) {
+                    const utterance = new SpeechSynthesisUtterance(data.texto_chino);
+                    utterance.lang = "zh-CN"; // Idioma chino
+                    speechSynthesis.speak(utterance);
+                } else {
+                    alert("No hay texto disponible para hablar.");
+                }
+            } catch (error) {
+                console.error("Error al obtener el texto:", error);
             }
         }
 
@@ -66,13 +70,18 @@
 </head>
 <body>
     <h1>🎙 Traductor de Español a Chino</h1>
+    
     <button class="start" onclick="iniciarEscucha()">▶️ Iniciar</button>
     <button class="stop" onclick="detenerEscucha()">⏹️ Detener</button>
     <button class="speak" onclick="iniciarVoz()">🔊 Hablar</button>
     <button class="clear" onclick="limpiarTexto()">🧹 Limpiar</button>
+
     <p id="estado_escucha" class="status inactive">⏹️ Escucha detenida</p>
+
+    <h2>Texto en Español</h2>
     <textarea id="texto_espanol" readonly></textarea>
+
+    <h2>Traducción en Chino</h2>
     <textarea id="texto_chino" readonly></textarea>
-    <audio id="audioPlayer" controls style="display: none;"></audio>
 </body>
 </html>

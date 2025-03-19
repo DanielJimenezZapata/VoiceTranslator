@@ -5,22 +5,22 @@ import threading
 import uuid
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"  # Clave secreta para manejar sesiones
+app.secret_key = "supersecretkey"  # Clave para sesiones
 
-# Inicialización de variables globales por usuario
+# Diccionario para almacenar datos por usuario
 usuarios = {}
 
-# Función para obtener un ID de usuario único en la sesión
+# Función para obtener un ID único por usuario
 def obtener_usuario():
     if "user_id" not in session:
         session["user_id"] = str(uuid.uuid4())  # Genera un ID único
     return session["user_id"]
 
-# Función de traducción
+# Función para traducir texto
 def traducir_texto(texto):
     return GoogleTranslator(source="es", target="zh-CN").translate(texto)
 
-# Función de reconocimiento de voz
+# Función para reconocer audio
 def reconocer_audio(user_id):
     recognizer = sr.Recognizer()
     with sr.Microphone() as source:
@@ -48,7 +48,7 @@ def reconocer_audio(user_id):
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template("index2.html")
 
 @app.route("/estado")
 def obtener_estado():
