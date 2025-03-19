@@ -11,6 +11,7 @@
         button { font-size: 18px; padding: 10px 20px; margin: 10px; cursor: pointer; }
         .start { background-color: #4CAF50; color: white; }
         .stop { background-color: #ff4b4b; color: white; }
+        .speak { background-color: #008CBA; color: white; }
         .status { font-size: 20px; font-weight: bold; margin-top: 10px; }
         .active { color: green; }
         .inactive { color: red; }
@@ -34,6 +35,10 @@
             actualizarEstado(false);
         }
 
+        async function iniciarVoz() {
+            await fetch('/hablar', { method: 'POST' });
+        }
+
         function actualizarEstado(escuchando) {
             const statusElement = document.getElementById("estado_escucha");
             if (escuchando) {
@@ -51,8 +56,9 @@
 <body>
     <h1>🎙 Traductor de Español a Chino</h1>
     
-    <button class="start" onclick="iniciarEscucha()">▶️ Iniciar Escucha</button>
-    <button class="stop" onclick="detenerEscucha()">⏹️ Detener Escucha</button>
+    <button class="start" onclick="iniciarEscucha()">▶️ Iniciar / 开始</button>
+    <button class="stop" onclick="detenerEscucha()">⏹️ Detener / 摊位</button>
+    <button class="speak" onclick="iniciarVoz()">🔊 Iniciar Voz / 语音播放器</button>
 
     <p id="estado_escucha" class="status inactive">⏹️ Escucha detenida</p>
 
