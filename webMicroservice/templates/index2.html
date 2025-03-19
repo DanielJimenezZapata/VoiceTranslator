@@ -5,47 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Traductor de Voz</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            text-align: center; 
-            margin: 50px; 
-        }
+        body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
         h1 { color: #ff4b4b; }
-        textarea { 
-            width: 90%; 
-            min-height: 150px;
-            font-size: 20px;
-            padding: 10px;
-            resize: none;
-        }
-        button { 
-            font-size: 20px; 
-            padding: 15px 25px; 
-            margin: 10px; 
-            cursor: pointer; 
-        }
+        textarea { width: 90%; min-height: 150px; font-size: 20px; padding: 10px; resize: none; }
+        button { font-size: 20px; padding: 15px 25px; margin: 10px; cursor: pointer; }
         .start { background-color: #4CAF50; color: white; }
         .stop { background-color: #ff4b4b; color: white; }
         .speak { background-color: #008CBA; color: white; }
         .clear { background-color: #ff9800; color: white; }
-        .status { 
-            font-size: 22px; 
-            font-weight: bold; 
-            margin-top: 10px; 
-        }
+        .status { font-size: 22px; font-weight: bold; margin-top: 10px; }
         .active { color: green; }
         .inactive { color: red; }
-
-        @media (max-width: 600px) {
-            textarea {
-                min-height: 200px;
-                font-size: 22px;
-            }
-            button {
-                font-size: 22px;
-                padding: 20px 30px;
-            }
-        }
     </style>
     <script>
         async function actualizarTexto() {
@@ -67,7 +37,16 @@
         }
 
         async function iniciarVoz() {
-            await fetch('/hablar', { method: 'POST' });
+            const response = await fetch('/hablar', { method: 'POST' });
+            const data = await response.json();
+            if (data.url) {
+                let audio = document.getElementById("audioPlayer");
+                audio.src = data.url;  
+                audio.style.display = "block";  
+                audio.play();
+            } else {
+                alert("Error: " + data.error);
+            }
         }
 
         async function limpiarTexto() {
@@ -78,13 +57,8 @@
 
         function actualizarEstado(escuchando) {
             const statusElement = document.getElementById("estado_escucha");
-            if (escuchando) {
-                statusElement.textContent = "🔊 Escuchando...";
-                statusElement.className = "status active";
-            } else {
-                statusElement.textContent = "⏹️ Escucha detenida";
-                statusElement.className = "status inactive";
-            }
+            statusElement.textContent = escuchando ? "🔊 Escuchando..." : "⏹️ Escucha detenida";
+            statusElement.className = escuchando ? "status active" : "status inactive";
         }
 
         setInterval(actualizarTexto, 3000);
@@ -92,18 +66,13 @@
 </head>
 <body>
     <h1>🎙 Traductor de Español a Chino</h1>
-    
     <button class="start" onclick="iniciarEscucha()">▶️ Iniciar</button>
     <button class="stop" onclick="detenerEscucha()">⏹️ Detener</button>
     <button class="speak" onclick="iniciarVoz()">🔊 Hablar</button>
     <button class="clear" onclick="limpiarTexto()">🧹 Limpiar</button>
-
     <p id="estado_escucha" class="status inactive">⏹️ Escucha detenida</p>
-
-    <h2>Texto en Español</h2>
     <textarea id="texto_espanol" readonly></textarea>
-
-    <h2>Traducción en Chino</h2>
     <textarea id="texto_chino" readonly></textarea>
+    <audio id="audioPlayer" controls style="display: none;"></audio>
 </body>
 </html>
