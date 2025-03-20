@@ -1,4 +1,0 @@
-Flask
-SpeechRecognition
-deep-translator
-pyttsx3

@@ -3,6 +3,7 @@ import speech_recognition as sr
 from deep_translator import GoogleTranslator
 import threading
 import uuid
+import pyttsx3  # Para síntesis de voz
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Clave para sesiones
@@ -20,7 +21,14 @@ def obtener_usuario():
 def traducir_texto(texto):
     return GoogleTranslator(source="es", target="zh-CN").translate(texto)
 
-# Función para reconocer audio
+# Configura el motor de síntesis de voz
+def configurar_motor():
+    motor = pyttsx3.init()
+    motor.setProperty("rate", 150)  # Configura la velocidad de habla
+    motor.setProperty("volume", 1)  # Configura el volumen
+    return motor
+
+# Función para reconocer audio y traducirlo
 def reconocer_audio(user_id):
     recognizer = sr.Recognizer()
     with sr.Microphone() as source:

@@ -19,6 +19,7 @@
     </style>
     <script>
         let vocesCargadas = false;
+        let ultimoTextoChino = ""; // Variable para almacenar el último texto traducido
 
         async function actualizarTexto() {
             try {
@@ -27,6 +28,12 @@
                 document.getElementById("texto_espanol").value = data.texto_espanol;
                 document.getElementById("texto_chino").value = data.texto_chino;
                 actualizarEstado(data.escuchando);
+
+                // Hablar automáticamente solo si hay nuevo texto en chino
+                if (data.texto_chino && data.texto_chino.trim() !== "" && data.texto_chino !== ultimoTextoChino) {
+                    ultimoTextoChino = data.texto_chino; // Actualizar el último texto traducido
+                    hablarTexto(data.texto_chino);
+                }
             } catch (error) {
                 console.error("Error al actualizar texto:", error);
             }
@@ -65,6 +72,32 @@
             });
         }
 
+        function hablarTexto(texto) {
+            if (!vocesCargadas) {
+                cargarVoces().then(() => hablarTexto(texto));
+                return;
+            }
+
+            speechSynthesis.cancel(); // Cancela cualquier voz en curso
+            let utterance = new SpeechSynthesisUtterance(texto);
+            utterance.lang = "zh-CN"; // Idioma chino
+
+            // Buscar una voz en chino
+            const vocesDisponibles = speechSynthesis.getVoices();
+            const vozChina = vocesDisponibles.find(v => v.lang.startsWith("zh"));
+            if (vozChina) {
+                utterance.voice = vozChina;
+            } else {
+                console.warn("⚠️ No se encontró una voz china. Se usará la predeterminada.");
+            }
+
+            utterance.onstart = () => console.log("🔊 Hablando...");
+            utterance.onerror = (e) => console.error("Error en síntesis de voz:", e);
+            utterance.onend = () => console.log("✅ Finalizado.");
+
+            speechSynthesis.speak(utterance);
+        }
+
         async function iniciarVoz() {
             try {
                 const response = await fetch('/hablar', { method: 'POST' });
@@ -75,28 +108,7 @@
                     return;
                 }
 
-                if (!vocesCargadas) {
-                    await cargarVoces();
-                }
-
-                speechSynthesis.cancel(); // Cancela cualquier voz en curso
-                let utterance = new SpeechSynthesisUtterance(data.texto_chino);
-                utterance.lang = "zh-CN"; // Idioma chino
-
-                // Buscar una voz en chino
-                const vocesDisponibles = speechSynthesis.getVoices();
-                const vozChina = vocesDisponibles.find(v => v.lang.startsWith("zh"));
-                if (vozChina) {
-                    utterance.voice = vozChina;
-                } else {
-                    console.warn("⚠️ No se encontró una voz china. Se usará la predeterminada.");
-                }
-
-                utterance.onstart = () => console.log("🔊 Hablando...");
-                utterance.onerror = (e) => console.error("Error en síntesis de voz:", e);
-                utterance.onend = () => console.log("✅ Finalizado.");
-
-                speechSynthesis.speak(utterance);
+                hablarTexto(data.texto_chino);
             } catch (error) {
                 console.error("Error al obtener el texto para hablar:", error);
             }
@@ -107,6 +119,7 @@
                 await fetch('/limpiar', { method: 'POST' });
                 document.getElementById("texto_espanol").value = "";
                 document.getElementById("texto_chino").value = "";
+                ultimoTextoChino = ""; // Limpiar el último texto traducido
             } catch (error) {
                 console.error("Error al limpiar texto:", error);
             }
