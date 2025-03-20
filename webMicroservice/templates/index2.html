@@ -31,8 +31,11 @@
 
                 // Hablar automáticamente solo si hay nuevo texto en chino
                 if (data.texto_chino && data.texto_chino.trim() !== "" && data.texto_chino !== ultimoTextoChino) {
-                    ultimoTextoChino = data.texto_chino; // Actualizar el último texto traducido
-                    hablarTexto(data.texto_chino);
+                    const nuevaFrase = obtenerNuevaFrase(data.texto_chino);  // Obtener solo lo nuevo
+                    if (nuevaFrase) {
+                        ultimoTextoChino = data.texto_chino; // Actualizar el último texto traducido
+                        hablarTexto(nuevaFrase); // Solo hablar lo nuevo
+                    }
                 }
             } catch (error) {
                 console.error("Error al actualizar texto:", error);
@@ -129,6 +132,17 @@
             const statusElement = document.getElementById("estado_escucha");
             statusElement.textContent = escuchando ? "🔊 Escuchando..." : "⏹️ Escucha detenida";
             statusElement.className = escuchando ? "status active" : "status inactive";
+        }
+
+        // Función para obtener solo la nueva parte añadida al texto chino
+        function obtenerNuevaFrase(textoChino) {
+            if (!ultimoTextoChino) {
+                return textoChino; // Si no hay texto anterior, devolver todo el texto
+            }
+
+            // Dividir los textos y obtener solo la parte nueva
+            const nuevaFrase = textoChino.replace(ultimoTextoChino, "").trim();
+            return nuevaFrase;
         }
 
         // Desbloquear SpeechSynthesis en iOS

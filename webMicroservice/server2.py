@@ -42,8 +42,10 @@ def reconocer_audio(user_id):
                 texto = recognizer.recognize_google(audio, language="es-ES")
                 if texto:
                     print(f"🗣 Texto reconocido ({user_id}): {texto}")
+                    # Acumulamos el texto en español
                     usuarios[user_id]["texto_espanol"] += " " + texto
                     traduccion = traducir_texto(texto)
+                    # Acumulamos la traducción
                     usuarios[user_id]["texto_chino"] += " " + traduccion
                     print(f"🇨🇳 Traducción ({user_id}): {traduccion}")
             except sr.UnknownValueError:
@@ -56,7 +58,7 @@ def reconocer_audio(user_id):
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template("index2.html")
 
 @app.route("/estado")
 def obtener_estado():
