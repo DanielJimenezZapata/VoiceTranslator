@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traductor de Voz</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            text-align: center;
+            margin: 50px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 95%;
+            min-height: 750px;
+            font-size: 20px;
+            padding: 15px;
+            resize: none;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            font-size: 18px;
+            padding: 15px 30px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: linear-gradient(145deg, #4CAF50, #45a049);
+            flex: 1 1 auto; /* Hace que los botones sean flexibles */
+            min-width: 120px; /* Ancho mínimo para evitar que se vean demasiado pequeños */
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .start {
+            background: linear-gradient(145deg, #4CAF50, #45a049);
+        }
+        .start:hover {
+            background: linear-gradient(145deg, #45a049, #4CAF50);
+        }
+        .stop {
+            background: linear-gradient(145deg, #ff4b4b, #e04343);
+        }
+        .stop:hover {
+            background: linear-gradient(145deg, #e04343, #ff4b4b);
+        }
+        .speak {
+            background: linear-gradient(145deg, #008CBA, #0077a3);
+        }
+        .speak:hover {
+            background: linear-gradient(145deg, #0077a3, #008CBA);
+        }
+        .clear {
+            background: linear-gradient(145deg, #ff9800, #e68a00);
+        }
+        .clear:hover {
+            background: linear-gradient(145deg, #e68a00, #ff9800);
+        }
+        .status {
+            font-size: 22px;
+            font-weight: bold;
+            margin-top: 10px;
+            color: #555;
+        }
+        .active { color: #4CAF50; }
+        .inactive { color: #ff4b4b; }
+        .language-select {
+            margin: 10px;
+            font-size: 18px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        details {
+            margin: 20px auto;
+            width: 90%;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+        }
+        details textarea {
+            width: 100%;
+            min-height: 750px;
+            font-size: 20px;
+            padding: 10px;
+            resize: none;
+        }
+        summary {
+            font-size: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #333;
+        }
+        .menu-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .menu-content .row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap; /* Permite que los botones se ajusten en pantallas pequeñas */
+            width: 100%;
+        }
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+
+        /* Estilos para pantallas pequeñas */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2rem;
+            }
+            textarea {
+                min-height: 300px;
+                font-size: 18px;
+            }
+            button {
+                font-size: 16px;
+                padding: 12px 20px;
+                min-width: 100px;
+            }
+            .language-select {
+                font-size: 16px;
+                padding: 6px;
+            }
+            details {
+                padding: 10px;
+            }
+            summary {
+                font-size: 18px;
+            }
+        }
+    </style>
+    <script>
+        let vocesCargadas = false;
+        let ultimoTextoOrigen = ""; // Variable para almacenar el último texto de origen
+        let ultimoTextoTraducido = ""; // Variable para almacenar el último texto traducido
+
+        // Idiomas soportados
+        const idiomas = {
+            "es": "Español",
+            "zh-CN": "Chino (Simplificado)",
+            "en": "Inglés",
+            "fr": "Francés",
+            "de": "Alemán",
+            "ja": "Japonés",
+        };
+
+        async function actualizarTexto() {
+            try {
+                const response = await fetch('/estado');
+                const data = await response.json();
+
+                // Actualizar texto_origen con salto de línea
+                if (data.texto_origen && data.texto_origen.trim() !== "" && data.texto_origen !== ultimoTextoOrigen) {
+                    const nuevaFraseOrigen = obtenerNuevaFrase(data.texto_origen, "origen"); // Obtener solo lo nuevo
+                    if (nuevaFraseOrigen) {
+                        ultimoTextoOrigen = data.texto_origen; // Actualizar el último texto de origen
+                        document.getElementById("texto_origen").value += "\n" + nuevaFraseOrigen; // Agregar salto de línea
+                    }
+                }
+
+                // Actualizar texto_traducido con salto de línea
+                if (data.texto_traducido && data.texto_traducido.trim() !== "" && data.texto_traducido !== ultimoTextoTraducido) {
+                    const nuevaFraseTraducida = obtenerNuevaFrase(data.texto_traducido, "traducido"); // Obtener solo lo nuevo
+                    if (nuevaFraseTraducida) {
+                        ultimoTextoTraducido = data.texto_traducido; // Actualizar el último texto traducido
+                        document.getElementById("texto_traducido").value += "\n" + nuevaFraseTraducida; // Agregar salto de línea
+                        hablarTexto(nuevaFraseTraducida); // Llamar a la función para hablar el texto
+                    }
+                }
+
+                actualizarEstado(data.escuchando);
+                hacerScrollAutomatico();
+            } catch (error) {
+                console.error("Error al actualizar texto:", error);
+            }
+        }
+
+        function hacerScrollAutomatico() {
+            const textareaOrigen = document.getElementById("texto_origen");
+            const textareaTraducido = document.getElementById("texto_traducido");
+            textareaOrigen.scrollTop = textareaOrigen.scrollHeight;
+            textareaTraducido.scrollTop = textareaTraducido.scrollHeight;
+        }
+
+        async function iniciarEscucha() {
+            try {
+                const idiomaOrigen = document.getElementById("idioma_origen").value;
+                const idiomaDestino = document.getElementById("idioma_destino").value;
+
+                await fetch('/iniciar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        idioma_origen: idiomaOrigen,
+                        idioma_destino: idiomaDestino,
+                    }),
+                });
+                actualizarEstado(true);
+            } catch (error) {
+                console.error("Error al iniciar escucha:", error);
+            }
+        }
+
+        async function detenerEscucha() {
+            try {
+                await fetch('/detener', { method: 'POST' });
+                actualizarEstado(false);
+            } catch (error) {
+                console.error("Error al detener escucha:", error);
+            }
+        }
+
+        function cargarVoces() {
+            return new Promise((resolve) => {
+                let voces = speechSynthesis.getVoices();
+                if (voces.length > 0) {
+                    vocesCargadas = true;
+                    resolve(voces);
+                } else {
+                    speechSynthesis.onvoiceschanged = () => {
+                        vocesCargadas = true;
+                        resolve(speechSynthesis.getVoices());
+                    };
+                }
+            });
+        }
+
+        function hablarTexto(texto) {
+            if (!vocesCargadas) {
+                cargarVoces().then(() => hablarTexto(texto));
+                return;
+            }
+
+            speechSynthesis.cancel(); // Cancela cualquier voz en curso
+            let utterance = new SpeechSynthesisUtterance(texto);
+            const idiomaDestino = document.getElementById("idioma_destino").value;
+            utterance.lang = idiomaDestino; // Usar el idioma de destino seleccionado
+
+            // Buscar una voz en el idioma seleccionado
+            const vocesDisponibles = speechSynthesis.getVoices();
+            const vozSeleccionada = vocesDisponibles.find(v => v.lang.startsWith(idiomaDestino));
+            if (vozSeleccionada) {
+                utterance.voice = vozSeleccionada;
+            } else {
+                console.warn(`⚠️ No se encontró una voz para ${idiomaDestino}. Se usará la predeterminada.`);
+            }
+
+            utterance.onstart = () => console.log("🔊 Hablando...");
+            utterance.onerror = (e) => console.error("Error en síntesis de voz:", e);
+            utterance.onend = () => console.log("✅ Finalizado.");
+
+            speechSynthesis.speak(utterance);
+        }
+
+        async function iniciarVoz() {
+            try {
+                const response = await fetch('/hablar', { method: 'POST' });
+                const data = await response.json();
+
+                if (!data.texto_traducido) {
+                    alert("No hay texto disponible para hablar.");
+                    return;
+                }
+
+                hablarTexto(data.texto_traducido); // Solo hablar el texto
+            } catch (error) {
+                console.error("Error al obtener el texto para hablar:", error);
+            }
+        }
+
+        async function limpiarTexto() {
+            try {
+                await fetch('/limpiar', { method: 'POST' });
+                document.getElementById("texto_origen").value = "";
+                document.getElementById("texto_traducido").value = "";
+                ultimoTextoOrigen = ""; // Limpiar el último texto de origen
+                ultimoTextoTraducido = ""; // Limpiar el último texto traducido
+            } catch (error) {
+                console.error("Error al limpiar texto:", error);
+            }
+        }
+
+        function actualizarEstado(escuchando) {
+            const statusElement = document.getElementById("estado_escucha");
+            statusElement.textContent = escuchando ? "🔊 Escuchando..." : "⏹️ Escucha detenida";
+            statusElement.className = escuchando ? "status active" : "status inactive";
+        }
+
+        // Función para obtener solo la nueva parte añadida al texto traducido
+        function obtenerNuevaFrase(textoCompleto, tipo) {
+            let ultimoTexto = "";
+
+            if (tipo === "origen") {
+                ultimoTexto = ultimoTextoOrigen; // Usar el último texto de origen
+            } else if (tipo === "traducido") {
+                ultimoTexto = ultimoTextoTraducido; // Usar el último texto traducido
+            }
+
+            if (!ultimoTexto) {
+                return textoCompleto; // Si no hay texto anterior, devolver todo el texto
+            }
+
+            // Dividir los textos y obtener solo la parte nueva
+            const nuevaFrase = textoCompleto.replace(ultimoTexto, "").trim();
+            return nuevaFrase;
+        }
+
+        // Desbloquear SpeechSynthesis en iOS
+        document.addEventListener("click", () => {
+            let utterance = new SpeechSynthesisUtterance("");
+            speechSynthesis.speak(utterance);
+            speechSynthesis.cancel();
+        }, { once: true });
+
+        // Precargar voces antes de hablar
+        cargarVoces();
+
+        // Actualizar la interfaz cada 3 segundos
+        setInterval(actualizarTexto, 3000);
+    </script>
+    <script>
+        // Actualizar las etiquetas de idioma cuando se cambie la selección
+        document.getElementById("idioma_origen").addEventListener("change", function() {
+            document.getElementById("idioma_origen_texto").textContent = idiomas[this.value];
+        });
+
+        document.getElementById("idioma_destino").addEventListener("change", function() {
+            document.getElementById("idioma_destino_texto").textContent = idiomas[this.value];
+        });
+    </script>
+    
+</head>
+<body>
+    <h1>🎙 Traductor de Voz</h1>
+
+    <details>
+        <summary>Botones</summary>
+        <div class="menu-content">
+            <div class="row">
+                <label for="idioma_origen">Idioma de origen:</label>
+                <select id="idioma_origen" class="language-select">
+                    <option value="es" selected>Español</option>
+                    <option value="en">Inglés</option>
+                    <option value="de">Alemán</option>
+                    <option value="zh-CN">Chino (Simplificado)</option>
+                </select>
+
+                <label for="idioma_destino">Idioma de destino:</label>
+                <select id="idioma_destino" class="language-select">
+                    <option value="es">Español</option>
+                    <option value="en">Inglés</option>
+                    <option value="de">Alemán</option>
+                    <option value="zh-CN" selected>Chino (Simplificado)</option>
+                </select>
+            </div>
+
+            <div class="row">
+                <button class="start" onclick="iniciarEscucha()">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                    Iniciar
+                </button>
+                
+                <button class="stop" onclick="detenerEscucha()">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14H9v-4h4v4zm0-6H9V6h4v4z"/></svg>
+                    Detener
+                </button>
+                <button class="speak" onclick="iniciarVoz()">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    Hablar
+                </button>
+                <button class="clear" onclick="limpiarTexto()">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    Limpiar
+                </button>
+            </div>
+        </div>
+    </details>
+
+    <p id="estado_escucha" class="status inactive">⏹️ Escucha detenida</p>
+    <details>
+        <summary>Texto Origen</summary>
+        <h2>Texto en <span id="idioma_origen_texto">Español</span></h2>
+        <textarea id="texto_origen" readonly></textarea>
+    </details>
+    <h2>Traducción en <span id="idioma_destino_texto">Chino (Simplificado)</span></h2>
+    <textarea id="texto_traducido" readonly></textarea>
+
+    <h3>Versión 1.0</h3>
+</body>
+</html>
