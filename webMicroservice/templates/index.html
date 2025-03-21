@@ -18,8 +18,7 @@
         .inactive { color: red; }
         .language-select { margin: 10px; font-size: 18px; padding: 5px; }
         details { margin: 20px auto; width: 90%; }
-        details textarea {width: 100%; min-height: 750px;font-size: 20px;padding: 10px;resize: none;
-}
+        details textarea {width: 100%; min-height: 750px;font-size: 20px;padding: 10px;resize: none;}
         summary { font-size: 20px; cursor: pointer; }
         .menu-content {
             display: flex;
@@ -253,7 +252,10 @@
 
             <!-- Fila 2: Botones -->
             <div class="row">
-                <button class="start" onclick="iniciarEscucha()">▶️ Iniciar</button>
+                <button class="start" onclick="iniciarEscucha()">
+                    <span id="mic-indicator" class="indicator"></span> ▶️ Iniciar
+                </button>
+                
                 <button class="stop" onclick="detenerEscucha()">⏹️ Detener</button>
                 <button class="speak" onclick="iniciarVoz()">🔊 Hablar</button>
                 <button class="clear" onclick="limpiarTexto()">🧹 Limpiar</button>

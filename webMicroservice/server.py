@@ -68,17 +68,22 @@ def obtener_estado():
 
 @app.route("/iniciar", methods=["POST"])
 def iniciar_escucha():
-    user_id = obtener_usuario()
-    if user_id not in usuarios:
-        usuarios[user_id] = {"texto_origen": "", "texto_traducido": "", "escuchando": False}
-    if not usuarios[user_id]["escuchando"]:
-        data = request.get_json()
-        idioma_origen = data.get("idioma_origen", "es")  # Por defecto español
-        idioma_destino = data.get("idioma_destino", "zh-CN")  # Por defecto chino
-        usuarios[user_id]["escuchando"] = True
-        hilo_escucha = threading.Thread(target=reconocer_audio, args=(user_id, idioma_origen, idioma_destino), daemon=True)
-        hilo_escucha.start()
-    return jsonify({"mensaje": "Escucha iniciada", "escuchando": True}), 200
+    try:
+        user_id = obtener_usuario()
+        if user_id not in usuarios:
+            usuarios[user_id] = {"texto_origen": "", "texto_traducido": "", "escuchando": False}
+        
+        if not usuarios[user_id]["escuchando"]:
+            data = request.get_json()
+            idioma_origen = data.get("idioma_origen", "es")  # Por defecto español
+            idioma_destino = data.get("idioma_destino", "zh-CN")  # Por defecto chino
+            usuarios[user_id]["escuchando"] = True
+            hilo_escucha = threading.Thread(target=reconocer_audio, args=(user_id, idioma_origen, idioma_destino), daemon=True)
+            hilo_escucha.start()
+        return jsonify({"mensaje": "Escucha iniciada", "escuchando": True}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/detener", methods=["POST"])
 def detener_escucha():
