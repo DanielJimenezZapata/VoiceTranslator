@@ -7,7 +7,7 @@
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
         h1 { color: #ff4b4b; }
-        textarea { width: 90%; min-height: 150px; font-size: 20px; padding: 10px; resize: none; }
+        textarea { width: 95%; min-height: 750px; font-size: 20px; padding: 10px; resize: none; }
         button { font-size: 20px; padding: 15px 25px; margin: 10px; cursor: pointer; border: none; border-radius: 5px; }
         .start { background-color: #4CAF50; color: white; }
         .stop { background-color: #ff4b4b; color: white; }
@@ -17,9 +17,26 @@
         .active { color: green; }
         .inactive { color: red; }
         .language-select { margin: 10px; font-size: 18px; padding: 5px; }
+        details { margin: 20px auto; width: 90%; }
+        details textarea {width: 100%; min-height: 750px;font-size: 20px;padding: 10px;resize: none;
+}
+        summary { font-size: 20px; cursor: pointer; }
+        .menu-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .menu-content .row {
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Alinea verticalmente */
+            gap: 10px; /* Espacio entre elementos */
+            margin-bottom: 10px; /* Espacio entre filas */
+        }
     </style>
     <script>
         let vocesCargadas = false;
+        let ultimoTextoOrigen = ""; // Variable para almacenar el último texto de origen
         let ultimoTextoTraducido = ""; // Variable para almacenar el último texto traducido
 
         // Idiomas soportados
@@ -37,21 +54,38 @@
             try {
                 const response = await fetch('/estado');
                 const data = await response.json();
-                document.getElementById("texto_origen").value = data.texto_origen;
-                document.getElementById("texto_traducido").value = data.texto_traducido;
-                actualizarEstado(data.escuchando);
 
-                // Hablar automáticamente solo si hay nuevo texto traducido
-                if (data.texto_traducido && data.texto_traducido.trim() !== "" && data.texto_traducido !== ultimoTextoTraducido) {
-                    const nuevaFrase = obtenerNuevaFrase(data.texto_traducido);  // Obtener solo lo nuevo
-                    if (nuevaFrase) {
-                        ultimoTextoTraducido = data.texto_traducido; // Actualizar el último texto traducido
-                        hablarTexto(nuevaFrase); // Solo hablar lo nuevo
+                // Actualizar texto_origen con salto de línea
+                if (data.texto_origen && data.texto_origen.trim() !== "" && data.texto_origen !== ultimoTextoOrigen) {
+                    const nuevaFraseOrigen = obtenerNuevaFrase(data.texto_origen, "origen"); // Obtener solo lo nuevo
+                    if (nuevaFraseOrigen) {
+                        ultimoTextoOrigen = data.texto_origen; // Actualizar el último texto de origen
+                        document.getElementById("texto_origen").value += "\n" + nuevaFraseOrigen; // Agregar salto de línea
                     }
                 }
+
+                // Actualizar texto_traducido con salto de línea
+                if (data.texto_traducido && data.texto_traducido.trim() !== "" && data.texto_traducido !== ultimoTextoTraducido) {
+                    const nuevaFraseTraducida = obtenerNuevaFrase(data.texto_traducido, "traducido"); // Obtener solo lo nuevo
+                    if (nuevaFraseTraducida) {
+                        ultimoTextoTraducido = data.texto_traducido; // Actualizar el último texto traducido
+                        document.getElementById("texto_traducido").value += "\n" + nuevaFraseTraducida; // Agregar salto de línea
+                        hablarTexto(nuevaFraseTraducida); // Llamar a la función para hablar el texto
+                    }
+                }
+
+                actualizarEstado(data.escuchando);
+                hacerScrollAutomatico();
             } catch (error) {
                 console.error("Error al actualizar texto:", error);
             }
+        }
+
+        function hacerScrollAutomatico() {
+            const textareaOrigen = document.getElementById("texto_origen");
+            const textareaTraducido = document.getElementById("texto_traducido");
+            textareaOrigen.scrollTop = textareaOrigen.scrollHeight;
+            textareaTraducido.scrollTop = textareaTraducido.scrollHeight;
         }
 
         async function iniciarEscucha() {
@@ -74,6 +108,7 @@
                 console.error("Error al iniciar escucha:", error);
             }
         }
+
         async function detenerEscucha() {
             try {
                 await fetch('/detener', { method: 'POST' });
@@ -135,7 +170,7 @@
                     return;
                 }
 
-                hablarTexto(data.texto_traducido);
+                hablarTexto(data.texto_traducido); // Solo hablar el texto
             } catch (error) {
                 console.error("Error al obtener el texto para hablar:", error);
             }
@@ -146,6 +181,7 @@
                 await fetch('/limpiar', { method: 'POST' });
                 document.getElementById("texto_origen").value = "";
                 document.getElementById("texto_traducido").value = "";
+                ultimoTextoOrigen = ""; // Limpiar el último texto de origen
                 ultimoTextoTraducido = ""; // Limpiar el último texto traducido
             } catch (error) {
                 console.error("Error al limpiar texto:", error);
@@ -159,13 +195,21 @@
         }
 
         // Función para obtener solo la nueva parte añadida al texto traducido
-        function obtenerNuevaFrase(textoTraducido) {
-            if (!ultimoTextoTraducido) {
-                return textoTraducido; // Si no hay texto anterior, devolver todo el texto
+        function obtenerNuevaFrase(textoCompleto, tipo) {
+            let ultimoTexto = "";
+
+            if (tipo === "origen") {
+                ultimoTexto = ultimoTextoOrigen; // Usar el último texto de origen
+            } else if (tipo === "traducido") {
+                ultimoTexto = ultimoTextoTraducido; // Usar el último texto traducido
+            }
+
+            if (!ultimoTexto) {
+                return textoCompleto; // Si no hay texto anterior, devolver todo el texto
             }
 
             // Dividir los textos y obtener solo la parte nueva
-            const nuevaFrase = textoTraducido.replace(ultimoTextoTraducido, "").trim();
+            const nuevaFrase = textoCompleto.replace(ultimoTexto, "").trim();
             return nuevaFrase;
         }
 
@@ -186,37 +230,44 @@
 <body>
     <h1>🎙 Traductor de Voz</h1>
 
-    <label for="idioma_origen">Idioma de origen:</label>
-    <select id="idioma_origen" class="language-select">
-        <option value="es">Español</option>
-        <option value="en">Inglés</option>
-        <option value="fr">Francés</option>
-        <option value="de">Alemán</option>
-        <option value="zh-CN">Chino (Simplificado)</option>
-    </select>
+    <details>
+        <summary>Botones</summary>
+        <div class="menu-content">
+            <!-- Fila 1: Selectores de idioma -->
+            <div class="row">
+                <label for="idioma_origen">Idioma de origen:</label>
+                <select id="idioma_origen" class="language-select">
+                    <option value="es" selected>Español</option>
+                    <option value="en">Inglés</option>
+                    <option value="de">Alemán</option>
+                    <option value="zh-CN">Chino (Simplificado)</option>
+                </select>
 
-    <label for="idioma_destino">Idioma de destino:</label>
-    <select id="idioma_destino" class="language-select">
-        <option value="es">Español</option>
-        <option value="en">Inglés</option>
-        <option value="fr">Francés</option>
-        <option value="de">Alemán</option>
-        <option value="zh-CN" selected>Chino (Simplificado)</option>
-    </select>
-    
+                <label for="idioma_destino">Idioma de destino:</label>
+                <select id="idioma_destino" class="language-select">
+                    <option value="es">Español</option>
+                    <option value="en">Inglés</option>
+                    <option value="de">Alemán</option>
+                    <option value="zh-CN" selected>Chino (Simplificado)</option>
+                </select>
+            </div>
 
-    <div>
-        <button class="start" onclick="iniciarEscucha()">▶️ Iniciar</button>
-        <button class="stop" onclick="detenerEscucha()">⏹️ Detener</button>
-        <button class="speak" onclick="iniciarVoz()">🔊 Hablar</button>
-        <button class="clear" onclick="limpiarTexto()">🧹 Limpiar</button>
-    </div>
+            <!-- Fila 2: Botones -->
+            <div class="row">
+                <button class="start" onclick="iniciarEscucha()">▶️ Iniciar</button>
+                <button class="stop" onclick="detenerEscucha()">⏹️ Detener</button>
+                <button class="speak" onclick="iniciarVoz()">🔊 Hablar</button>
+                <button class="clear" onclick="limpiarTexto()">🧹 Limpiar</button>
+            </div>
+        </div>
+    </details>
 
     <p id="estado_escucha" class="status inactive">⏹️ Escucha detenida</p>
-
-    <h2>Texto en <span id="idioma_origen_texto">Español</span></h2>
-    <textarea id="texto_origen" readonly></textarea>
-
+    <details>
+        <summary>Texto Origen</summary>
+        <h2>Texto en <span id="idioma_origen_texto">Español</span></h2>
+        <textarea id="texto_origen" readonly></textarea>
+    </details>
     <h2>Traducción en <span id="idioma_destino_texto">Chino (Simplificado)</span></h2>
     <textarea id="texto_traducido" readonly></textarea>
 

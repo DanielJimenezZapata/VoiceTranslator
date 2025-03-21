@@ -3,7 +3,7 @@ import speech_recognition as sr
 from deep_translator import GoogleTranslator
 import threading
 import uuid
-import pyttsx3  # Para síntesis de voz
+import pyttsx3 
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Clave para sesiones
@@ -17,7 +17,6 @@ def obtener_usuario():
         session["user_id"] = str(uuid.uuid4())  # Genera un ID único
     return session["user_id"]
 
-# Función para traducir texto
 def traducir_texto(texto, idioma_origen, idioma_destino):
     return GoogleTranslator(source=idioma_origen, target=idioma_destino).translate(texto)
 
