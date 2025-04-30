@@ -100,6 +100,9 @@
         let interimTranscript = '';
         let isProcessing = false;
         let voicesLoaded = false;
+        let lastSpokenText = '';
+        let speechQueue = [];
+        let isSpeaking = false;
         
         // Mapeo de códigos de idioma para reconocimiento de voz
         const speechRecognitionLanguages = {
@@ -140,6 +143,11 @@
                 document.getElementById('start-btn').disabled = true;
                 document.getElementById('stop-btn').disabled = false;
                 document.getElementById('permission-error').style.display = 'none';
+                
+                // Solo limpiamos el texto origen al iniciar, no el traducido
+                finalTranscript = '';
+                interimTranscript = '';
+                document.getElementById("source-text").value = '';
             };
             
             recognition.onerror = (event) => {
@@ -215,16 +223,31 @@
                 
                 if (data.translated_text) {
                     if (isFinal) {
-                        targetTextarea.value += (targetTextarea.value ? "\n" : "") + data.translated_text;
+                        // Añadimos nueva línea solo si ya hay contenido
+                        if (targetTextarea.value) {
+                            targetTextarea.value += "\n" + data.translated_text;
+                        } else {
+                            targetTextarea.value = data.translated_text;
+                        }
                         
                         // Reproducir automáticamente si está activado
                         if (document.getElementById('auto-speak').checked) {
-                            speakText(data.translated_text, targetLang);
+                            speakText(data.translated_text, targetLang, true);
                         }
                     } else {
+                        // Para texto intermedio, reemplazamos la última línea
                         const lines = targetTextarea.value.split('\n');
-                        lines[lines.length - 1] = data.translated_text;
-                        targetTextarea.value = lines.join('\n');
+                        if (lines.length > 0) {
+                            lines[lines.length - 1] = data.translated_text;
+                            targetTextarea.value = lines.join('\n');
+                        } else {
+                            targetTextarea.value = data.translated_text;
+                        }
+                        
+                        // Reproducir automáticamente texto intermedio si está activado
+                        if (document.getElementById('auto-speak').checked) {
+                            speakText(data.translated_text, targetLang, false);
+                        }
                     }
                     
                     scrollToBottom();
@@ -237,10 +260,25 @@
             }
         }
         
-        // Función para reproducir texto
-        function speakText(text, lang) {
-            if (!text.trim() || !voicesLoaded) return;
+        // Función para reproducir texto (modificada)
+        function speakText(text, lang, isFinal) {
+            if (!text.trim() || !voicesLoaded || !document.getElementById('auto-speak').checked) return;
             
+            // Si es texto intermedio, cancelamos la reproducción anterior para evitar superposición
+            if (!isFinal) {
+                window.speechSynthesis.cancel();
+            }
+            
+            // Evitar repetir el mismo texto
+            if (text === lastSpokenText) return;
+            
+            // Si ya se está reproduciendo algo, lo encolamos
+            if (window.speechSynthesis.speaking) {
+                speechQueue.push({text, lang});
+                return;
+            }
+            
+            lastSpokenText = text;
             const synth = window.speechSynthesis;
             const utterance = new SpeechSynthesisUtterance(text);
             
@@ -258,7 +296,16 @@
             utterance.rate = 0.9;
             utterance.pitch = 1;
             
-            synth.cancel(); // Cancelar cualquier reproducción anterior
+            utterance.onend = () => {
+                isSpeaking = false;
+                // Reproducir el siguiente en la cola si hay
+                if (speechQueue.length > 0) {
+                    const next = speechQueue.shift();
+                    speakText(next.text, next.lang, true);
+                }
+            };
+            
+            isSpeaking = true;
             synth.speak(utterance);
         }
         
@@ -333,6 +380,11 @@
             document.getElementById('start-btn').disabled = false;
             document.getElementById('stop-btn').disabled = true;
             updateStatus(false);
+            
+            // No limpiamos el texto traducido aquí, solo el texto origen
+            finalTranscript = '';
+            interimTranscript = '';
+            document.getElementById("source-text").value = '';
         }
         
         // Limpiar textos
@@ -341,6 +393,9 @@
             interimTranscript = '';
             document.getElementById("source-text").value = '';
             document.getElementById("translated-text").value = '';
+            lastSpokenText = '';
+            speechQueue = [];
+            window.speechSynthesis.cancel();
         }
         
         // Inicializar la aplicación
@@ -355,7 +410,7 @@
                 const text = document.getElementById("translated-text").value;
                 const targetLang = document.getElementById("target-lang").value;
                 if (text.trim()) {
-                    speakText(text, targetLang);
+                    speakText(text, targetLang, true);
                 }
             });
             document.getElementById("clear-btn").addEventListener("click", clearTexts);
