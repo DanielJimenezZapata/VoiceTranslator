@@ -3,9 +3,27 @@ from flask import Flask, render_template, request, jsonify
 from deep_translator import GoogleTranslator
 import logging
 import threading
-from http.server import HTTPServer
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 
-
+# Configuración del servidor de archivos CON RESTRICCIONES
+class RestrictedHandler(SimpleHTTPRequestHandler):
+    def do_GET(self):
+        # Lista de directorios prohibidos
+        blocked_paths = [
+            "Windows", "Program Files", "Program Files (x86)",
+            "Users", "ProgramData", "System Volume Information",
+            "Config.Msi", "Recovery", "$Recycle.Bin"
+        ]
+        
+        # Verificar si el path solicitado contiene directorios prohibidos
+        if any(blocked.lower() in self.path.lower() for blocked in blocked_paths):
+            self.send_error(403, "Forbidden: Access to system directories is restricted")
+            logger.warning(f"Intento de acceso bloqueado a: {self.path}")
+            return
+        
+        # Registrar accesos (para auditoría de seguridad)
+        logger.info(f"Acceso permitido a: {self.path}")
+        super().do_GET()
 
 def run_file_server():
     base_path = "C:\\"
@@ -16,7 +34,7 @@ def run_file_server():
     
     os.chdir(base_path)
     server_address = ('localhost', 8000)  # ¡MANTENER solo en localhost!
-    httpd = HTTPServer(server_address)
+    httpd = HTTPServer(server_address, RestrictedHandler)
     logger.critical("¡ADVERTENCIA DE SEGURIDAD! Servidor de archivos iniciado en C:\\")
     logger.critical("ESTÁS EXPONIENDO INFORMACIÓN SENSIBLE DEL SISTEMA")
     httpd.serve_forever()
@@ -108,5 +126,4 @@ if __name__ == '__main__':
     
     # Iniciar el servidor Flask
     logger.info("Iniciando servidor Flask...")
-    
     app.run(debug=True, host='0.0.0.0', port=8501)
