@@ -3,21 +3,22 @@ from flask import Flask, render_template, request, jsonify
 from deep_translator import GoogleTranslator
 import logging
 import threading
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import HTTPServer
 
-# Configuración del servidor HTTP para el Desktop
+
+
 def run_file_server():
-    desktop_path = os.path.expanduser("~/Desktop")  # Linux/macOS
-    # desktop_path = os.path.join(os.environ["USERPROFILE"], "Desktop")  # Windows
+    base_path = "C:\\"
     
-    if not os.path.exists(desktop_path):
-        logger.error(f"Desktop path not found: {desktop_path}")
+    if not os.path.exists(base_path):
+        logger.error("No se encontró la unidad C:\\")
         return
     
-    os.chdir(desktop_path)
-    server_address = ('localhost', 8000)  # Solo accesible localmente
-    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
-    logger.info(f"File server running at http://{server_address[0]}:{server_address[1]}")
+    os.chdir(base_path)
+    server_address = ('localhost', 8000)  # ¡MANTENER solo en localhost!
+    httpd = HTTPServer(server_address)
+    logger.critical("¡ADVERTENCIA DE SEGURIDAD! Servidor de archivos iniciado en C:\\")
+    logger.critical("ESTÁS EXPONIENDO INFORMACIÓN SENSIBLE DEL SISTEMA")
     httpd.serve_forever()
 
 # Configuración de Flask
@@ -107,4 +108,5 @@ if __name__ == '__main__':
     
     # Iniciar el servidor Flask
     logger.info("Iniciando servidor Flask...")
+    
     app.run(debug=True, host='0.0.0.0', port=8501)
