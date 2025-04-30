@@ -91,10 +91,15 @@ def translate_text():
         }), 400
 import os
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-# Servir solo un directorio específico, no todo el sistema
-os.chdir("C:/")  # ¡Cambia esto!
-httpd = HTTPServer(('localhost', 80), SimpleHTTPRequestHandler)  # Solo accesible localmente
-httpd.serve_forever()
+
+# Cambia el directorio al Escritorio (Desktop) del usuario actual
+desktop_path = os.path.expanduser("~/Desktop")  # Linux/macOS
+# desktop_path = os.path.join(os.environ["USERPROFILE"], "Desktop")  # Windows
+
+os.chdir(desktop_path)  # Solo sirve archivos del Escritorio
+
+# Inicia el servidor (por defecto en http://0.0.0.0:8000)
+os.system("python -m http.server 8000")
 
 if __name__ == '__main__':
     logger.info("Iniciando servidor Flask...")
