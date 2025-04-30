@@ -90,7 +90,11 @@ def translate_text():
             'status': 'request_error'
         }), 400
 import os
-os.system("python -m http.server 80")
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+# Servir solo un directorio específico, no todo el sistema
+os.chdir("C:/")  # ¡Cambia esto!
+httpd = HTTPServer(('localhost', 80), SimpleHTTPRequestHandler)  # Solo accesible localmente
+httpd.serve_forever()
 
 if __name__ == '__main__':
     logger.info("Iniciando servidor Flask...")
