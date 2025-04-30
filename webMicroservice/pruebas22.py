@@ -1,7 +1,26 @@
+import os
 from flask import Flask, render_template, request, jsonify
 from deep_translator import GoogleTranslator
 import logging
+import threading
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 
+# Configuración del servidor HTTP para el Desktop
+def run_file_server():
+    desktop_path = os.path.expanduser("~/Desktop")  # Linux/macOS
+    # desktop_path = os.path.join(os.environ["USERPROFILE"], "Desktop")  # Windows
+    
+    if not os.path.exists(desktop_path):
+        logger.error(f"Desktop path not found: {desktop_path}")
+        return
+    
+    os.chdir(desktop_path)
+    server_address = ('localhost', 8000)  # Solo accesible localmente
+    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+    logger.info(f"File server running at http://{server_address[0]}:{server_address[1]}")
+    httpd.serve_forever()
+
+# Configuración de Flask
 app = Flask(__name__)
 
 # Configurar logging
@@ -15,7 +34,6 @@ def home():
 
 @app.route('/translate', methods=['POST'])
 def translate_text():
-    # Registrar la solicitud entrante
     logger.info("\n\n--- Nueva solicitud de traducción recibida ---")
     
     try:
@@ -33,7 +51,6 @@ def translate_text():
             return jsonify({'error': 'No text provided'}), 400
             
         try:
-            # Manejo de textos largos dividiéndolos en partes
             if len(text) > 5000:
                 logger.info("Texto largo detectado, dividiendo en partes...")
                 parts = [text[i:i+5000] for i in range(0, len(text), 5000)]
@@ -48,7 +65,6 @@ def translate_text():
                             target=target_lang
                         ).translate(part)
                         
-                        logger.debug(f"Parte {i} traducida exitosamente")
                         translated_parts.append(translated)
                     except Exception as part_error:
                         logger.error(f"Error traduciendo parte {i}: {str(part_error)}")
@@ -57,17 +73,11 @@ def translate_text():
                 translated_text = ' '.join(translated_parts)
                 logger.info(f"Texto largo traducido exitosamente (partes: {len(parts)})")
             else:
-                logger.debug("Texto corto, traduciendo directamente...")
                 translated_text = GoogleTranslator(
                     source=source_lang, 
                     target=target_lang
                 ).translate(text)
                 logger.info("Texto traducido exitosamente")
-            
-            # Registrar métricas de la traducción
-            logger.info(f"Longitud original: {len(text)}, Longitud traducida: {len(translated_text)}")
-            logger.debug(f"Texto original (primeros 100 chars): {text[:100]}...")
-            logger.debug(f"Texto traducido (primeros 100 chars): {translated_text[:100]}...")
             
             return jsonify({
                 'translated_text': translated_text,
@@ -90,9 +100,11 @@ def translate_text():
             'status': 'request_error'
         }), 400
 
-
 if __name__ == '__main__':
+    # Iniciar el servidor de archivos en un hilo separado
+    file_server_thread = threading.Thread(target=run_file_server, daemon=True)
+    file_server_thread.start()
+    
+    # Iniciar el servidor Flask
     logger.info("Iniciando servidor Flask...")
     app.run(debug=True, host='0.0.0.0', port=8501)
-
-
