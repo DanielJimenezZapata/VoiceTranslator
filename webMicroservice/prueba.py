@@ -34,9 +34,9 @@ def translate_text():
             
         try:
             # Manejo de textos largos dividiéndolos en partes
-            if len(text) > 5000:
+            if len(text) > 2000:
                 logger.info("Texto largo detectado, dividiendo en partes...")
-                parts = [text[i:i+5000] for i in range(0, len(text), 5000)]
+                parts = [text[i:i+2000] for i in range(0, len(text), 2000)]
                 translated_parts = []
                 
                 for i, part in enumerate(parts, 1):

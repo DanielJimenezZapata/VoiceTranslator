@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 @app.route('/')
 def home():
     logger.info("Serving home page")
-    return render_template('prueba2.html')
+    return render_template('index2.html')
 
 @app.route('/translate', methods=['POST'])
 def translate_text():
